@@ -25,7 +25,8 @@ async function writeDataToInfluxDB(data, country) {
     const host = process.env.INFLUXDB_HOST;
     const database = process.env.INFLUXDB_DATABASE;
     const token = process.env.INFLUXDB_TOKEN;
-    const url = `${host}/api/v2/write?bucket=${database}&org=local&precision=ms`;
+    const org = process.env.INFLUXDB_ORG;
+    const url = `${host}/api/v2/write?bucket=${database}&org=${org}&precision=ms`;
     const headers = { Authorization: `Token ${token}` };
     const response = await axios.post(url, data, { headers });
     if (response.status === 204) {
