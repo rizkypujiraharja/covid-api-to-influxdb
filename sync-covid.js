@@ -1,7 +1,14 @@
 const axios = require('axios');
 const { DateTime } = require('luxon');
+const fs = require('fs/promises');
 
 require('dotenv').config()
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
+}
 
 async function getCountries() {
     const url = 'https://api.covid19api.com/countries';
@@ -39,8 +46,29 @@ async function writeDataToInfluxDB(data, country) {
 
 async function processData() {
     const countries = await getCountries();
+    let index = 0
+    let nextIndex = 0
+
+    // try {
+    //     const data = await fs.readFile('last_country.txt', { encoding: 'utf8' });
+    //     last_track = data.split("_")[0]
+    //     nextIndex = parseInt(last_track) + 1
+    // } catch (err) {
+    //     console.log(err);
+    // }
+
     for (const country of countries) {
+        // if (nextIndex == index) {
         const covidStats = await getCovidStats(country);
+        const lastCountry = index.toString() + "_" + country;
+
+        fs.writeFile('last_country.txt', lastCountry, err => {
+            if (err) {
+                console.error(err);
+            }
+            // file written successfully
+        });
+
         let data = '';
         for (const entry of covidStats) {
             const time = DateTime.fromISO(entry.Date);
@@ -55,8 +83,12 @@ async function processData() {
             data += `,active=${entry.Active}`;
             data += ` ${msTime}\n`;
         }
-        // console.log(data);
+
         await writeDataToInfluxDB(data, country);
+        await sleep(1000);
+        // break
+        // }
+        // index++;
     }
 }
 
