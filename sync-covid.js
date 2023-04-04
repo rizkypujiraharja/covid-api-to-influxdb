@@ -1,18 +1,15 @@
 const axios = require('axios');
 const { DateTime } = require('luxon');
-const fs = require('fs/promises');
 
 require('dotenv').config()
 
-function sleep(ms) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
-    });
-}
-
 async function getCountries() {
     const url = 'https://api.covid19api.com/countries';
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+        headers: {
+            'X-Access-Token': process.env.COVID_API_KEY,
+        },
+    });
     const countries = response.data.map(entry => entry.Slug);
     console.log("Finished getting countries.")
     return countries;
@@ -23,7 +20,11 @@ async function getCovidStats(countryCode) {
     const today = DateTime.local().toISODate();
     const to = `${today}T00:00:00Z`;
     const url = `https://api.covid19api.com/country/${countryCode}?from=${from}&to=${to}`;
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+        headers: {
+            'X-Access-Token': process.env.COVID_API_KEY,
+        },
+    });
     console.log(`Finished getting data for ${countryCode}.`);
     return response.data;
 }
@@ -46,28 +47,9 @@ async function writeDataToInfluxDB(data, country) {
 
 async function processData() {
     const countries = await getCountries();
-    let index = 0
-    let nextIndex = 0
-
-    // try {
-    //     const data = await fs.readFile('last_country.txt', { encoding: 'utf8' });
-    //     last_track = data.split("_")[0]
-    //     nextIndex = parseInt(last_track) + 1
-    // } catch (err) {
-    //     console.log(err);
-    // }
 
     for (const country of countries) {
-        // if (nextIndex == index) {
         const covidStats = await getCovidStats(country);
-        const lastCountry = index.toString() + "_" + country;
-
-        fs.writeFile('last_country.txt', lastCountry, err => {
-            if (err) {
-                console.error(err);
-            }
-            // file written successfully
-        });
 
         let data = '';
         for (const entry of covidStats) {
@@ -85,10 +67,6 @@ async function processData() {
         }
 
         await writeDataToInfluxDB(data, country);
-        await sleep(1000);
-        // break
-        // }
-        // index++;
     }
 }
 
