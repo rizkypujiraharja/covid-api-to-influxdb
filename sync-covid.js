@@ -16,6 +16,9 @@ async function getCountries() {
 }
 
 async function getCovidStats(countryCode) {
+    if (countryCode === 'united-states') {
+        return [];
+    }
     const from = '2020-03-01T00:00:00Z';
     const today = DateTime.local().toISODate();
     const to = `${today}T00:00:00Z`;
